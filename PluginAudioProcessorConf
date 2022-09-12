@@ -1,0 +1,45 @@
+juce::AudioProcessorValueTreeState* getApvts(){ return &apvts;}
+juce::UndoManager* getUndoManager(){ return &undoManager;}
+
+private:
+
+juce::AudioProcessorValueTreeState::ParameterLayout getParameterLayout();
+juce::AudioProcessorValueTreeState apvts;
+juce::UndoManager undoManager;
+
+********
+
+, apvts(*this, &undoManager, "pluginParameter", getParameterLayout())
+
+********
+
+juce::AudioProcessorValueTreeState::ParameterLayout getParameterLayout()
+{
+	juce::AudioProcessorValueTreeState::ParameterLayout layout;
+
+	layout.add(std::make_unique<juce::AudioParameterFloat>(
+		"gain",
+		"gain",
+		0.0f,
+		1.0f,
+		0.5f));
+	return layout;
+}
+
+
+//==============================================================================
+void _AudioProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    auto state = apvts.copyState();
+    std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    copyXmlToBinary (*xml, destData);
+}
+
+void _AudioProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    std::unique_ptr<juce::XmlElement> xmlState (getXmlFromBinary (data, sizeInBytes));
+
+    if (xmlState.get() != nullptr)
+        if (xmlState->hasTagName (apvts.state.getType()))
+            apvts.replaceState (juce::ValueTree::fromXml (*xmlState));
+}
